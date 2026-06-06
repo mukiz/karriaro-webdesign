@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Beispiele &amp; Fähigkeiten — Karriaro Webdesign</title>
+<meta name="description" content="Eine Auswahl unserer Fähigkeiten und interaktiven Beispiele — inklusive eines mausreaktiven WebGL-Partikelschwarms." />
+<link rel="stylesheet" href="assets/site.css" />
+<style>
+  .page-head { padding: clamp(56px, 9vw, 100px) 0 clamp(20px, 4vw, 40px); }
+  .page-head h1 { max-width: 18ch; }
+  .page-head .lead { max-width: 56ch; margin-top: 20px; }
+
+  /* Featured live demo */
+  .demo-frame {
+    position: relative;
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--panel-border);
+    background: #03060f;
+    aspect-ratio: 16 / 9;
+    box-shadow: 0 30px 80px rgba(0, 60, 140, 0.3);
+  }
+  .demo-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .demo-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap; margin-top: 18px;
+  }
+  .demo-bar .tags { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tag {
+    font-size: 12px; color: var(--muted);
+    border: 1px solid var(--panel-border); background: var(--panel);
+    padding: 5px 11px; border-radius: 999px;
+  }
+  @media (max-width: 640px) { .demo-frame { aspect-ratio: 4 / 5; } }
+
+  .skill-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+  .skill-row:last-child { margin-bottom: 0; }
+  .skill-row .name { width: 190px; font-weight: 600; flex-shrink: 0; font-size: 15px; }
+  .bar { flex: 1; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.07); overflow: hidden; }
+  .bar > span { display: block; height: 100%; border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+  @media (max-width: 560px) { .skill-row { flex-wrap: wrap; } .skill-row .name { width: 100%; } }
+</style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="container inner">
+      <a class="brand" href="index.html"><span class="dot"></span> Karriaro</a>
+      <div class="nav-links">
+        <a href="index.html">Start</a>
+        <a href="beispiele.html" class="active">Beispiele &amp; Fähigkeiten</a>
+        <a href="index.html#kontakt" class="hide-sm">Kontakt</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Page header -->
+  <header class="page-head">
+    <div class="container">
+      <span class="badge">Portfolio</span>
+      <h1 style="margin-top:18px;">Beispiele &amp; Fähigkeiten</h1>
+      <p class="lead">Ein Einblick in das, was wir bauen: von durchdachtem Interface-Design bis zu interaktiven WebGL-Erlebnissen. Probier das Live-Beispiel direkt unten aus.</p>
+    </div>
+  </header>
+
+  <!-- Featured interactive demo -->
+  <section class="section" style="padding-top: 20px;">
+    <div class="container">
+      <div class="section-head" style="margin-bottom: 24px;">
+        <span class="eyebrow">Live-Beispiel</span>
+        <h2 style="margin-top:10px;">Interaktiver Drohnenschwarm</h2>
+        <p class="lead" style="margin-top:12px;">Tausende Partikel formen eine Rakete. <b style="color:var(--fg)">Bewege die Maus</b> durch den Schwarm oder <b style="color:var(--fg)">klick</b> für eine Explosion.</p>
+      </div>
+
+      <div class="demo-frame">
+        <iframe src="demos/drohnenschwarm.html" title="Interaktiver Drohnenschwarm — Live-Demo" loading="lazy"></iframe>
+      </div>
+
+      <div class="demo-bar">
+        <div class="tags">
+          <span class="tag">WebGL</span>
+          <span class="tag">Three.js</span>
+          <span class="tag">Particle Morphing</span>
+          <span class="tag">Mouse Repulsion</span>
+        </div>
+        <a class="btn" href="demos/drohnenschwarm.html" target="_blank" rel="noopener">In Vollbild öffnen ↗</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Capabilities grid -->
+  <section class="section" style="padding-top: 0;">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Was wir können</span>
+        <h2 style="margin-top:10px;">Unsere Fähigkeiten</h2>
+      </div>
+      <div class="grid cols-3">
+        <div class="card">
+          <div class="ico">🎨</div>
+          <h3>UI/UX &amp; Branding</h3>
+          <p>Designsysteme, Layouts und Markenauftritte, die klar, modern und wiedererkennbar sind.</p>
+        </div>
+        <div class="card">
+          <div class="ico">⚙️</div>
+          <h3>Frontend-Entwicklung</h3>
+          <p>HTML, CSS, JavaScript &amp; moderne Frameworks – sauber, barrierearm und schnell.</p>
+        </div>
+        <div class="card">
+          <div class="ico">✨</div>
+          <h3>WebGL &amp; 3D</h3>
+          <p>Partikelsysteme, 3D-Szenen und Shader mit Three.js für unvergessliche Effekte.</p>
+        </div>
+        <div class="card">
+          <div class="ico">🎞️</div>
+          <h3>Motion &amp; Interaktion</h3>
+          <p>Scroll-Animationen, Mikrointeraktionen und Übergänge, die sich natürlich anfühlen.</p>
+        </div>
+        <div class="card">
+          <div class="ico">📱</div>
+          <h3>Responsive Design</h3>
+          <p>Ein Erlebnis, das auf Smartphone, Tablet und Desktop gleichermaßen überzeugt.</p>
+        </div>
+        <div class="card">
+          <div class="ico">🚀</div>
+          <h3>Performance &amp; SEO</h3>
+          <p>Optimierte Ladezeiten und sauberes Markup für gute Rankings und zufriedene Nutzer.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Skill bars -->
+  <section class="section" style="padding-top: 0;">
+    <div class="container">
+      <div class="grid cols-2">
+        <div class="card">
+          <h3 style="margin-bottom:22px;">Technologien</h3>
+          <div class="skill-row"><span class="name">HTML &amp; CSS</span><div class="bar"><span style="width:98%"></span></div></div>
+          <div class="skill-row"><span class="name">JavaScript / TypeScript</span><div class="bar"><span style="width:92%"></span></div></div>
+          <div class="skill-row"><span class="name">Three.js / WebGL</span><div class="bar"><span style="width:88%"></span></div></div>
+          <div class="skill-row"><span class="name">React / Frameworks</span><div class="bar"><span style="width:85%"></span></div></div>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom:22px;">Gestaltung</h3>
+          <div class="skill-row"><span class="name">UI / UX Design</span><div class="bar"><span style="width:94%"></span></div></div>
+          <div class="skill-row"><span class="name">Motion / Animation</span><div class="bar"><span style="width:90%"></span></div></div>
+          <div class="skill-row"><span class="name">Branding</span><div class="bar"><span style="width:82%"></span></div></div>
+          <div class="skill-row"><span class="name">Accessibility</span><div class="bar"><span style="width:80%"></span></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="section" style="padding-top: 0;">
+    <div class="container">
+      <div class="card" style="text-align:center; padding: clamp(40px,6vw,72px);">
+        <h2 style="margin-bottom:12px;">Etwas Ähnliches im Kopf?</h2>
+        <p class="lead" style="max-width:46ch; margin:0 auto 28px;">Lass uns über dein Projekt sprechen.</p>
+        <a class="btn primary" href="index.html#kontakt">Kontakt aufnehmen →</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container inner">
+      <div>© 2026 Karriaro Webdesign</div>
+      <div><a href="index.html" style="color:var(--accent)">Zurück zur Startseite</a></div>
+    </div>
+  </footer>
+</body>
+</html>

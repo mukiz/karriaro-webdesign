@@ -1,33 +1,43 @@
-# Drohnenschwarm · Particle Morphing Demo
+# Karriaro Webdesign
 
-Eine interaktive WebGL-Demo: tausende Partikel („Drohnen") formen eine Rakete
-und reagieren auf die Mausbewegung – genau die Technik aus modernen
-Webdesign-Trends 2026.
+Eine kleine, moderne Agentur-Website mit einer Unterseite, die Fähigkeiten und
+interaktive Beispiele zeigt – darunter ein mausreaktiver WebGL-Partikelschwarm
+(„Drohnen", die eine Rakete formen).
 
-## Verwendete Technik
+## Seitenstruktur
 
-- **Particle System / Particle Morphing** – viele Einzelpunkte ergeben zusammen
-  eine erkennbare Form.
-- **Mouse Repulsion** – Partikel werden vom Cursor abgestoßen und federn per
+| Datei                          | Inhalt                                                        |
+| ------------------------------ | ------------------------------------------------------------ |
+| `index.html`                   | Startseite – Hero, Leistungen, Teaser zum Vorzeige-Beispiel  |
+| `beispiele.html`               | **Beispiele & Fähigkeiten** – Live-Demo + Skills-Übersicht   |
+| `demos/drohnenschwarm.html`    | Vollbild-Demo des interaktiven Partikelschwarms              |
+| `assets/site.css`              | Gemeinsames Stylesheet für die Site                          |
+
+Die Demo wird auf `beispiele.html` per `<iframe>` eingebettet. Mit dem
+Query-Parameter `?embed=1` (`drohnenschwarm.html?embed=1`) wird das Text-Overlay
+ausgeblendet, damit die Vorschau in Karten/Teasern sauber wirkt.
+
+## Verwendete Technik (Demo)
+
+- **Particle System / Particle Morphing** – viele Einzelpunkte ergeben eine Form.
+- **Mouse Repulsion** – Partikel weichen dem Cursor aus und federn per
   Spring-Physik zurück in Formation.
 - **WebGL via [Three.js](https://threejs.org/)** – GPU-gerendert für tausende
   flüssige Partikel.
 
-## Starten
+## Lokal starten
 
-Einfach `index.html` im Browser öffnen. Es wird keine Installation benötigt –
-Three.js wird per CDN (Import Map) geladen, daher ist eine Internetverbindung
-nötig.
-
-Alternativ über einen lokalen Server (empfohlen, vermeidet evtl. CDN-/CORS-Probleme):
+Einfach `index.html` im Browser öffnen. Empfohlen über einen lokalen Server
+(vermeidet CDN-/iframe-Probleme beim direkten Datei-Öffnen):
 
 ```bash
-# Python
 python3 -m http.server 8080
 # dann http://localhost:8080 öffnen
 ```
 
-## Interaktion
+> Three.js wird per CDN (Import Map) geladen – eine Internetverbindung ist nötig.
+
+## Interaktion in der Demo
 
 | Aktion              | Effekt                                    |
 | ------------------- | ----------------------------------------- |
@@ -35,14 +45,3 @@ python3 -m http.server 8080
 | **Klicken**         | Explosion – der Schwarm reformiert sich   |
 | **Form wechseln**   | Morpht zwischen Rakete und Kugel          |
 | **Zurücksetzen**    | Zurück zur Rakete                         |
-
-## Wie es funktioniert (Kurzfassung)
-
-1. Für jede Zielform (Rakete, Kugel) werden Punkte prozedural auf der
-   Oberfläche verteilt → das sind die „Home"-Positionen.
-2. Pro Frame zieht eine Feder jedes Partikel zu seiner Home-Position
-   (`SPRING`), während Dämpfung (`DAMP`) für weiche Bewegung sorgt.
-3. Die Mausposition wird auf eine Ebene im 3D-Raum projiziert; Partikel in der
-   Nähe bekommen einen Abstoßungsimpuls (`REPEL_RADIUS`, `REPEL_FORCE`).
-4. Beim Morphen werden lediglich die Home-Positionen und Farben getauscht – die
-   Feder-Physik animiert den Übergang automatisch.

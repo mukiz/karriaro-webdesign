@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Drohnenschwarm · Particle Morphing Demo</title>
+<style>
+  :root {
+    --fg: #dceeff;
+    --muted: rgba(220, 238, 255, 0.55);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; background: #03060f; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--fg);
+    cursor: crosshair;
+  }
+  canvas { display: block; }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 10;
+    padding: clamp(20px, 4vw, 48px);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .top h1 {
+    font-size: clamp(20px, 3vw, 34px);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    text-shadow: 0 2px 30px rgba(0, 140, 255, 0.4);
+  }
+  .top p {
+    margin-top: 6px;
+    font-size: clamp(12px, 1.4vw, 15px);
+    color: var(--muted);
+    max-width: 48ch;
+    line-height: 1.5;
+  }
+  .bottom {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .hint {
+    font-size: 13px;
+    color: var(--muted);
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  .hint b { color: var(--fg); font-weight: 600; }
+  .controls { pointer-events: auto; display: flex; gap: 10px; flex-wrap: wrap; }
+  button {
+    pointer-events: auto;
+    font: inherit;
+    font-size: 13px;
+    color: var(--fg);
+    background: rgba(120, 180, 255, 0.08);
+    border: 1px solid rgba(140, 190, 255, 0.25);
+    backdrop-filter: blur(8px);
+    border-radius: 999px;
+    padding: 9px 16px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, transform 0.1s;
+  }
+  button:hover { background: rgba(120, 180, 255, 0.18); border-color: rgba(140, 190, 255, 0.5); }
+  button:active { transform: translateY(1px); }
+  .badge {
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+  <div class="overlay" id="overlay">
+    <div class="top">
+      <div class="badge">Webdesign 2026 · WebGL Particle System</div>
+      <h1>Drohnenschwarm</h1>
+      <p>Tausende Partikel formen eine Rakete. Bewege die Maus durch den Schwarm — die „Drohnen“ weichen dem Cursor aus und finden zurück in Formation.</p>
+    </div>
+    <div class="bottom">
+      <div class="hint">
+        <span><b>Maus bewegen</b> → abstoßen</span>
+        <span><b>Klicken</b> → Explosion</span>
+      </div>
+      <div class="controls">
+        <button id="morphBtn">Form wechseln</button>
+        <button id="resetBtn">Zurücksetzen</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+    }
+  }
+  </script>
+
+  <script type="module">
+  import * as THREE from 'three';
+
+  // Embed mode (?embed=1): hide the text overlay so the demo can sit cleanly
+  // inside a card/iframe on the showcase page.
+  if (new URLSearchParams(location.search).has('embed')) {
+    document.getElementById('overlay').style.display = 'none';
+  }
+
+  // ---------------------------------------------------------------------------
+  // Scene setup
+  // ---------------------------------------------------------------------------
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x03060f, 0.012);
+
+  const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 1000);
+  camera.position.set(0, 0, 16);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setSize(innerWidth, innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  // Faint starfield in the background so it reads as "sky"
+  addStars();
+
+  // ---------------------------------------------------------------------------
+  // Build target shapes (point clouds the swarm can morph between)
+  // ---------------------------------------------------------------------------
+  const COUNT = 6500;
+  const rocket = buildRocket(COUNT);
+  const sphere = buildSphere(COUNT);
+  const shapes = [rocket, sphere];
+  let shapeIndex = 0;
+
+  // Per-particle state
+  const positions = new Float32Array(COUNT * 3); // live positions
+  const colors = new Float32Array(COUNT * 3);
+  const velocities = new Float32Array(COUNT * 3);
+  const home = new Float32Array(COUNT * 3);      // current target (morphs over time)
+  const seed = new Float32Array(COUNT);          // per-particle randomness
+
+  for (let i = 0; i < COUNT; i++) {
+    const i3 = i * 3;
+    // start scattered in a cloud so the first formation animates in
+    positions[i3]     = (Math.random() - 0.5) * 40;
+    positions[i3 + 1] = (Math.random() - 0.5) * 40;
+    positions[i3 + 2] = (Math.random() - 0.5) * 40;
+    home[i3]     = rocket.pos[i3];
+    home[i3 + 1] = rocket.pos[i3 + 1];
+    home[i3 + 2] = rocket.pos[i3 + 2];
+    colors[i3]     = rocket.col[i3];
+    colors[i3 + 1] = rocket.col[i3 + 1];
+    colors[i3 + 2] = rocket.col[i3 + 2];
+    seed[i] = Math.random();
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+  const material = new THREE.PointsMaterial({
+    size: 0.14,
+    map: makeDroneSprite(),
+    vertexColors: true,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    sizeAttenuation: true,
+  });
+
+  const points = new THREE.Points(geometry, material);
+  scene.add(points);
+
+  // ---------------------------------------------------------------------------
+  // Pointer interaction (project cursor onto z = 0 plane for world-space force)
+  // ---------------------------------------------------------------------------
+  const pointer = new THREE.Vector2(0, 0);
+  const mouseWorld = new THREE.Vector3(9999, 9999, 9999); // off-screen by default
+  const raycaster = new THREE.Raycaster();
+  const planeZ0 = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+  let pointerActive = false;
+  let explodeT = 0;
+
+  addEventListener('pointermove', (e) => {
+    pointer.x = (e.clientX / innerWidth) * 2 - 1;
+    pointer.y = -(e.clientY / innerHeight) * 2 + 1;
+    pointerActive = true;
+  });
+  addEventListener('pointerleave', () => { pointerActive = false; });
+  addEventListener('pointerdown', () => { explodeT = 1; });
+
+  document.getElementById('morphBtn').addEventListener('click', morph);
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    shapeIndex = 0;
+    applyShape(shapes[0]);
+  });
+
+  function morph() {
+    shapeIndex = (shapeIndex + 1) % shapes.length;
+    applyShape(shapes[shapeIndex]);
+  }
+
+  // Reassign home targets + tween colors toward the new shape
+  function applyShape(shape) {
+    for (let i = 0; i < COUNT; i++) {
+      const i3 = i * 3;
+      home[i3]     = shape.pos[i3];
+      home[i3 + 1] = shape.pos[i3 + 1];
+      home[i3 + 2] = shape.pos[i3 + 2];
+    }
+    targetColors = shape.col;
+  }
+  let targetColors = rocket.col;
+
+  // ---------------------------------------------------------------------------
+  // Animation loop
+  // ---------------------------------------------------------------------------
+  const SPRING = 0.018;   // pull back toward formation
+  const DAMP = 0.90;      // velocity damping
+  const REPEL_RADIUS = 3.2;
+  const REPEL_FORCE = 0.9;
+  const clock = new THREE.Clock();
+  let angle = 0;
+
+  const tmp = new THREE.Vector3();
+  const rot = new THREE.Vector3();
+
+  function animate() {
+    const dt = Math.min(clock.getDelta(), 0.05);
+    const t = clock.elapsedTime;
+
+    // gentle continuous rotation of the whole formation
+    angle += dt * 0.25;
+    const ca = Math.cos(angle), sa = Math.sin(angle);
+
+    // resolve mouse position in world space
+    if (pointerActive) {
+      raycaster.setFromCamera(pointer, camera);
+      raycaster.ray.intersectPlane(planeZ0, mouseWorld);
+    } else {
+      mouseWorld.set(9999, 9999, 9999);
+    }
+
+    explodeT *= 0.94; // decay explosion impulse
+
+    const colAttr = geometry.attributes.color.array;
+
+    for (let i = 0; i < COUNT; i++) {
+      const i3 = i * 3;
+
+      // rotate home target around Y so the rocket turns in 3D
+      const hx = home[i3], hy = home[i3 + 1], hz = home[i3 + 2];
+      rot.x = hx * ca + hz * sa;
+      rot.y = hy;
+      rot.z = -hx * sa + hz * ca;
+
+      // subtle hover so each drone bobs independently
+      const s = seed[i];
+      rot.x += Math.sin(t * 1.3 + s * 6.28) * 0.05;
+      rot.y += Math.cos(t * 1.1 + s * 6.28) * 0.05;
+
+      let px = positions[i3], py = positions[i3 + 1], pz = positions[i3 + 2];
+      let vx = velocities[i3], vy = velocities[i3 + 1], vz = velocities[i3 + 2];
+
+      // spring toward formation
+      vx += (rot.x - px) * SPRING;
+      vy += (rot.y - py) * SPRING;
+      vz += (rot.z - pz) * SPRING;
+
+      // mouse repulsion (world space)
+      const dx = px - mouseWorld.x;
+      const dy = py - mouseWorld.y;
+      const dz = pz - mouseWorld.z;
+      const dist2 = dx * dx + dy * dy + dz * dz;
+      if (dist2 < REPEL_RADIUS * REPEL_RADIUS) {
+        const dist = Math.sqrt(dist2) || 0.001;
+        const f = (1 - dist / REPEL_RADIUS) * REPEL_FORCE;
+        vx += (dx / dist) * f;
+        vy += (dy / dist) * f;
+        vz += (dz / dist) * f;
+      }
+
+      // click explosion: push outward from center
+      if (explodeT > 0.01) {
+        const len = Math.sqrt(px * px + py * py + pz * pz) || 0.001;
+        const f = explodeT * 1.6;
+        vx += (px / len) * f;
+        vy += (py / len) * f;
+        vz += (pz / len) * f;
+      }
+
+      vx *= DAMP; vy *= DAMP; vz *= DAMP;
+      positions[i3]     = px + vx;
+      positions[i3 + 1] = py + vy;
+      positions[i3 + 2] = pz + vz;
+      velocities[i3]     = vx;
+      velocities[i3 + 1] = vy;
+      velocities[i3 + 2] = vz;
+
+      // ease colors toward the active shape's palette
+      colAttr[i3]     += (targetColors[i3] - colAttr[i3]) * 0.04;
+      colAttr[i3 + 1] += (targetColors[i3 + 1] - colAttr[i3 + 1]) * 0.04;
+      colAttr[i3 + 2] += (targetColors[i3 + 2] - colAttr[i3 + 2]) * 0.04;
+    }
+
+    geometry.attributes.position.needsUpdate = true;
+    geometry.attributes.color.needsUpdate = true;
+
+    renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+  }
+  animate();
+
+  addEventListener('resize', () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+
+  // ===========================================================================
+  // Shape builders — each returns { pos: Float32Array, col: Float32Array }
+  // ===========================================================================
+  function buildRocket(n) {
+    const pos = new Float32Array(n * 3);
+    const col = new Float32Array(n * 3);
+    const droneA = new THREE.Color(0x6fd2ff); // cool cyan
+    const droneB = new THREE.Color(0xffffff);
+    const flame = new THREE.Color(0xff7a1a);
+    const flameHot = new THREE.Color(0xffd23a);
+
+    const Y = -1; // vertical offset so the rocket is centered on screen
+
+    for (let i = 0; i < n; i++) {
+      const i3 = i * 3;
+      const r = Math.random();
+      let x, y, z, isFlame = false;
+
+      if (r < 0.42) {
+        // body cylinder (radius 1, height 4)
+        const th = Math.random() * Math.PI * 2;
+        x = Math.cos(th); z = Math.sin(th);
+        y = Math.random() * 4 - 2;
+      } else if (r < 0.65) {
+        // nose cone (height 2 above body)
+        const h = Math.random();
+        const rad = 1 - h;
+        const th = Math.random() * Math.PI * 2;
+        x = Math.cos(th) * rad; z = Math.sin(th) * rad;
+        y = 2 + h * 2;
+      } else if (r < 0.85) {
+        // 4 fins at the base
+        const fin = Math.floor(Math.random() * 4);
+        const a = fin * Math.PI / 2;
+        // barycentric point in the fin triangle (radial r, vertical y)
+        let u = Math.random(), v = Math.random();
+        if (u + v > 1) { u = 1 - u; v = 1 - v; }
+        const rr = 1 + (2.4 - 1) * v;     // 1.0 .. 2.4 outward
+        const yy = -0.5 - 1.5 * (u + v);  // -0.5 .. -2.0 down
+        x = Math.cos(a) * rr; z = Math.sin(a) * rr; y = yy;
+      } else {
+        // exhaust flame below the rocket
+        isFlame = true;
+        const h = Math.random();
+        const rad = (1 - h) * 0.9 * Math.random();
+        const th = Math.random() * Math.PI * 2;
+        x = Math.cos(th) * rad; z = Math.sin(th) * rad;
+        y = -2 - h * 2.2;
+      }
+
+      pos[i3] = x; pos[i3 + 1] = y + Y; pos[i3 + 2] = z;
+
+      let c;
+      if (isFlame) {
+        c = flame.clone().lerp(flameHot, Math.random());
+      } else {
+        c = droneA.clone().lerp(droneB, Math.random() * 0.6);
+      }
+      col[i3] = c.r; col[i3 + 1] = c.g; col[i3 + 2] = c.b;
+    }
+    return { pos, col };
+  }
+
+  function buildSphere(n) {
+    const pos = new Float32Array(n * 3);
+    const col = new Float32Array(n * 3);
+    const a = new THREE.Color(0x7af0c0);
+    const b = new THREE.Color(0x6fb6ff);
+    const R = 3.6;
+    for (let i = 0; i < n; i++) {
+      const i3 = i * 3;
+      // even-ish distribution on a sphere
+      const u = Math.random(), v = Math.random();
+      const theta = 2 * Math.PI * u;
+      const phi = Math.acos(2 * v - 1);
+      pos[i3]     = R * Math.sin(phi) * Math.cos(theta);
+      pos[i3 + 1] = R * Math.cos(phi);
+      pos[i3 + 2] = R * Math.sin(phi) * Math.sin(theta);
+      const c = a.clone().lerp(b, v);
+      col[i3] = c.r; col[i3 + 1] = c.g; col[i3 + 2] = c.b;
+    }
+    return { pos, col };
+  }
+
+  // ===========================================================================
+  // Helpers
+  // ===========================================================================
+  function makeDroneSprite() {
+    const s = 64;
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = s;
+    const ctx = cv.getContext('2d');
+    const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(0.25, 'rgba(255,255,255,0.9)');
+    g.addColorStop(0.5, 'rgba(160,210,255,0.35)');
+    g.addColorStop(1, 'rgba(160,210,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, s, s);
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }
+
+  function addStars() {
+    const n = 1200;
+    const p = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      const i3 = i * 3;
+      p[i3]     = (Math.random() - 0.5) * 120;
+      p[i3 + 1] = (Math.random() - 0.5) * 120;
+      p[i3 + 2] = -20 - Math.random() * 80;
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(p, 3));
+    const m = new THREE.PointsMaterial({
+      size: 0.18, color: 0x8fb8ff, transparent: true, opacity: 0.6,
+      depthWrite: false, blending: THREE.AdditiveBlending,
+    });
+    scene.add(new THREE.Points(g, m));
+  }
+  </script>
+</body>
+</html>
