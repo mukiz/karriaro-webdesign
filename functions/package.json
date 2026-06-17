@@ -1,0 +1,20 @@
+{
+  "name": "karriaro-sofort-skizze-functions",
+  "description": "Server-Endpunkt /api/sofort-skizze für das Karriaro Lead-Werkzeug",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "scripts": {
+    "serve": "firebase emulators:start --only functions",
+    "deploy": "firebase deploy --only functions"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "firebase-functions": "^6.1.0",
+    "node-html-parser": "^7.0.1"
+  }
+}

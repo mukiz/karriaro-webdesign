@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+functions/node_modules/
+web/node_modules/
+
+# Builds
+web/dist/
+
+# Firebase
+.firebase/
+*-debug.log
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Env / Secrets — niemals committen
+.env
+.env.*
+!.env.example
+functions/.env
+functions/.secret.local
+
+# OS / Editor
+.DS_Store
+*.local
